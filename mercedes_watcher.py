@@ -1,3 +1,4 @@
+import socket
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -12,26 +13,50 @@ HEADERS = {
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9,tr;q=0.8",
+    "Connection": "close",
 }
 
 
+def force_ipv4() -> None:
+    """
+    GitHub runner bazen domain'e bağlanırken IPv6/DNS tarafında takılabiliyor.
+    Mercedes request'leri için IPv4'e zorluyoruz.
+    """
+    original_getaddrinfo = socket.getaddrinfo
+
+    def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+        return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+    socket.getaddrinfo = getaddrinfo_ipv4
+
+
 def fetch_mercedes_html() -> str:
+    force_ipv4()
+
     last_error = None
 
-    for attempt in range(1, 4):
+    for attempt in range(1, 6):
         try:
+            print(f"Mercedes fetch attempt {attempt}/5")
+
             response = requests.get(
                 MERCEDES_URL,
                 headers=HEADERS,
-                timeout=90,
+                timeout=(20, 90),  # connect timeout, read timeout
+                allow_redirects=True,
             )
+
             response.raise_for_status()
+
+            if "/job/" not in response.text:
+                print("Mercedes page fetched, but no job links found in HTML.")
+
             return response.text
 
         except Exception as error:
             last_error = error
             print(f"Mercedes fetch attempt {attempt} failed: {type(error).__name__}: {error}")
-            time.sleep(10)
+            time.sleep(10 * attempt)
 
     raise last_error
 
