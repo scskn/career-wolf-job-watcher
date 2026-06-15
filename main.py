@@ -4,6 +4,7 @@ from bosch_watcher import get_bosch_jobs
 from mercedes_watcher import get_mercedes_jobs
 from siemens_watcher import get_siemens_jobs
 from epam_watcher import get_epam_jobs
+from health import maybe_send_health_check
 
 WATCHERS = [
     {
@@ -97,7 +98,7 @@ def run_once():
         check_company(seen_jobs, watcher)
 
     save_seen_jobs(seen_jobs)
-
+    maybe_send_health_check()
 
 if __name__ == "__main__":
     try:
