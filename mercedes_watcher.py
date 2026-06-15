@@ -9,7 +9,7 @@ def get_mercedes_jobs() -> list[dict]:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(MERCEDES_URL, wait_until="networkidle", timeout=60000)
+        page.goto(MERCEDES_URL, wait_until="domcontentloaded", timeout=60000)
 
         page.wait_for_timeout(5000)
 

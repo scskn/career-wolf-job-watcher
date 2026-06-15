@@ -70,7 +70,19 @@ From now on, only NEW {watcher["company"]} jobs will trigger alerts."""
 
 def check_company(seen_jobs: set[str], watcher: dict) -> None:
     company = watcher["company"]
-    current_jobs = watcher["getter"]()
+
+    try:
+        current_jobs = watcher["getter"]()
+    except Exception as error:
+        send_telegram_message(
+            f"""⚠️ {company} watcher error
+
+{type(error).__name__}: {error}
+
+Other company watchers will continue."""
+        )
+        print(f"{company} failed: {type(error).__name__}: {error}")
+        return
 
     if watcher["init_key"] not in seen_jobs:
         initialize_company(seen_jobs, watcher, current_jobs)
