@@ -1,58 +1,54 @@
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 MERCEDES_URL = "https://careers.mercedesbenzturk.com.tr/search/?createNewAlert=false&q=&locationsearch=&optionsFacetsDD_dept=&optionsFacetsDD_location="
 
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,tr;q=0.8",
+}
+
 
 def get_mercedes_jobs() -> list[dict]:
+    response = requests.get(
+        MERCEDES_URL,
+        headers=HEADERS,
+        timeout=40,
+    )
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
     jobs = []
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-
-        context = browser.new_context(
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        )
-
-        page = context.new_page()
-        page.set_default_timeout(120000)
-        page.set_default_navigation_timeout(120000)
-
-        # Sayfayı hafiflet: image/font/media yükleme, HTML yeterli.
-        page.route(
-            "**/*",
-            lambda route: route.abort()
-            if route.request.resource_type in ["image", "media", "font"]
-            else route.continue_()
-        )
-
-        page.goto(MERCEDES_URL, wait_until="commit", timeout=120000)
-
-        # JS biraz yerleşsin
-        page.wait_for_timeout(10000)
-
-        links = page.locator("a").evaluate_all("""
-            elements => elements.map(a => ({
-                text: (a.innerText || '').trim(),
-                href: a.href
-            })).filter(x => x.text.length > 3)
-        """)
-
-        browser.close()
-
     seen_ids = set()
 
-    for item in links:
-        title = item["text"].strip()
-        link = item["href"].strip()
+    for a in soup.find_all("a", href=True):
+        title = a.get_text(strip=True)
+        link = a["href"].strip()
+
+        if not title:
+            continue
+
+        if "/job/" not in link:
+            continue
+
+        if link.startswith("/"):
+            link = "https://careers.mercedesbenzturk.com.tr" + link
+        elif link.startswith("http") is False:
+            link = "https://careers.mercedesbenzturk.com.tr/" + link.lstrip("/")
 
         if "careers.mercedesbenzturk.com.tr/job/" not in link:
             continue
 
         job_id = link.rstrip("/").split("/")[-1]
+
+        if not job_id.isdigit():
+            continue
 
         if job_id in seen_ids:
             continue
