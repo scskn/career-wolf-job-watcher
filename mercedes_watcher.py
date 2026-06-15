@@ -1,3 +1,4 @@
+import time
 import requests
 from bs4 import BeautifulSoup
 
@@ -14,15 +15,30 @@ HEADERS = {
 }
 
 
-def get_mercedes_jobs() -> list[dict]:
-    response = requests.get(
-        MERCEDES_URL,
-        headers=HEADERS,
-        timeout=40,
-    )
-    response.raise_for_status()
+def fetch_mercedes_html() -> str:
+    last_error = None
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    for attempt in range(1, 4):
+        try:
+            response = requests.get(
+                MERCEDES_URL,
+                headers=HEADERS,
+                timeout=90,
+            )
+            response.raise_for_status()
+            return response.text
+
+        except Exception as error:
+            last_error = error
+            print(f"Mercedes fetch attempt {attempt} failed: {type(error).__name__}: {error}")
+            time.sleep(10)
+
+    raise last_error
+
+
+def get_mercedes_jobs() -> list[dict]:
+    html = fetch_mercedes_html()
+    soup = BeautifulSoup(html, "html.parser")
 
     jobs = []
     seen_ids = set()
@@ -39,7 +55,7 @@ def get_mercedes_jobs() -> list[dict]:
 
         if link.startswith("/"):
             link = "https://careers.mercedesbenzturk.com.tr" + link
-        elif link.startswith("http") is False:
+        elif not link.startswith("http"):
             link = "https://careers.mercedesbenzturk.com.tr/" + link.lstrip("/")
 
         if "careers.mercedesbenzturk.com.tr/job/" not in link:
