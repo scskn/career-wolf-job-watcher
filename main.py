@@ -13,11 +13,6 @@ WATCHERS = [
         "getter": get_bosch_jobs,
     },
     {
-        "company": "Mercedes-Benz Türk",
-        "init_key": "SYSTEM::MERCEDES_INITIALIZED_V1",
-        "getter": get_mercedes_jobs,
-    },
-    {
         "company": "Siemens",
         "init_key": "SYSTEM::SIEMENS_INITIALIZED_ALL_PAGES_V1",
         "getter": get_siemens_jobs,
@@ -26,6 +21,11 @@ WATCHERS = [
         "company": "EPAM",
         "init_key": "SYSTEM::EPAM_INITIALIZED_ALL_PAGES_V1",
         "getter": get_epam_jobs,
+    },
+    {
+        "company": "Mercedes-Benz Türk",
+        "init_key": "SYSTEM::MERCEDES_INITIALIZED_V1",
+        "getter": get_mercedes_jobs,
     },
 ]
 
@@ -108,8 +108,8 @@ def run_once():
 
     for watcher in WATCHERS:
         check_company(seen_jobs, watcher)
+        save_seen_jobs(seen_jobs)
 
-    save_seen_jobs(seen_jobs)
     maybe_send_health_check()
 
 if __name__ == "__main__":
