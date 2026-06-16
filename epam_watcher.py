@@ -40,52 +40,68 @@ def extract_epam_jobs_from_current_page(page) -> list[dict]:
     return jobs
 
 
-def click_next_page(page, page_number: int) -> bool:
-    before_text = page.locator("body").inner_text(timeout=15000)
+def find_enabled_next_button(page):
+    next_buttons = page.locator(
+        "button, a, [role='button'], [role='link']"
+    ).filter(
+        has_text=re.compile(r"^\s*Next\s*.*$", re.IGNORECASE)
+    )
 
-    next_page_number = str(page_number + 1)
+    count = next_buttons.count()
 
-    candidates = [
-        page.locator("a, button, [role='button'], [role='link'], li").filter(
-            has_text=re.compile(r"^\s*Next\s*.*$", re.IGNORECASE)
-        ),
-        page.locator("a, button, [role='button'], [role='link'], li").filter(
-            has_text=re.compile(rf"^\s*{next_page_number}\s*$")
-        ),
-        page.get_by_text("Next", exact=False),
-    ]
+    for index in range(count):
+        button = next_buttons.nth(index)
 
-    for candidate in candidates:
         try:
-            if candidate.count() == 0:
+            if not button.is_visible(timeout=2000):
                 continue
 
-            candidate.last.click(timeout=10000)
+            if not button.is_enabled(timeout=2000):
+                continue
 
-            try:
-                page.wait_for_function(
-                    "(oldText) => document.body.innerText !== oldText",
-                    arg=before_text,
-                    timeout=20000,
-                )
-            except Exception:
-                page.wait_for_timeout(5000)
+            return button
 
-            after_text = page.locator("body").inner_text(timeout=15000)
+        except Exception:
+            continue
 
-            if after_text != before_text:
-                return True
+    return None
 
-        except Exception as error:
-            print(f"EPAM next click candidate failed: {type(error).__name__}: {error}")
 
-    return False
+def click_next_page(page) -> bool:
+    next_button = find_enabled_next_button(page)
+
+    if next_button is None:
+        print("EPAM next button is not available or disabled. Stopping pagination.")
+        return False
+
+    before_text = page.locator("body").inner_text(timeout=15000)
+
+    next_button.click(timeout=10000)
+
+    try:
+        page.wait_for_function(
+            "(oldText) => document.body.innerText !== oldText",
+            arg=before_text,
+            timeout=20000,
+        )
+    except Exception:
+        page.wait_for_timeout(5000)
+
+    after_text = page.locator("body").inner_text(timeout=15000)
+
+    if after_text == before_text:
+        print("EPAM page did not change after clicking Next. Stopping pagination.")
+        return False
+
+    return True
 
 
 def get_epam_jobs() -> list[dict]:
     all_jobs = []
     seen_ids = set()
     seen_page_signatures = set()
+
+    max_pages = 50
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -94,7 +110,9 @@ def get_epam_jobs() -> list[dict]:
 
         page.wait_for_timeout(8000)
 
-        for page_number in range(1, 20):
+        page_number = 1
+
+        while page_number <= max_pages:
             jobs = extract_epam_jobs_from_current_page(page)
 
             if page_number == 1 and not jobs:
@@ -103,9 +121,11 @@ def get_epam_jobs() -> list[dict]:
             page_signature = "|".join(job["id"] for job in jobs)
 
             if not page_signature:
+                print("EPAM page has no job signature. Stopping pagination.")
                 break
 
             if page_signature in seen_page_signatures:
+                print("EPAM page signature repeated. Stopping pagination.")
                 break
 
             seen_page_signatures.add(page_signature)
@@ -117,10 +137,11 @@ def get_epam_jobs() -> list[dict]:
                     seen_ids.add(job["id"])
                     all_jobs.append(job)
 
-            if not click_next_page(page, page_number):
+            if not click_next_page(page):
                 break
 
             page.wait_for_timeout(3000)
+            page_number += 1
 
         browser.close()
 
