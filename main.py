@@ -24,7 +24,7 @@ WATCHERS = [
     },
     {
         "company": "EPAM",
-        "init_key": "SYSTEM::EPAM_INITIALIZED_V1",
+        "init_key": "SYSTEM::EPAM_INITIALIZED_ALL_PAGES_V1",
         "getter": get_epam_jobs,
     },
 ]
