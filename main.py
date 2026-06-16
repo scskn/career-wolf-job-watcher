@@ -19,7 +19,7 @@ WATCHERS = [
     },
     {
         "company": "Siemens",
-        "init_key": "SYSTEM::SIEMENS_INITIALIZED_V4",
+        "init_key": "SYSTEM::SIEMENS_INITIALIZED_ALL_PAGES_V1",
         "getter": get_siemens_jobs,
     },
     {
