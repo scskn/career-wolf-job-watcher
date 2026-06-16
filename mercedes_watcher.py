@@ -1,6 +1,9 @@
 import socket
 import time
+import random
+
 import requests
+import urllib3.util.connection
 from bs4 import BeautifulSoup
 
 MERCEDES_URL = "https://careers.mercedesbenzturk.com.tr/search/?createNewAlert=false&q=&locationsearch=&optionsFacetsDD_dept=&optionsFacetsDD_location="
@@ -12,22 +15,17 @@ HEADERS = {
         "Chrome/120.0.0.0 Safari/537.36"
     ),
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9,tr;q=0.8",
+    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
     "Connection": "close",
 }
 
 
 def force_ipv4() -> None:
     """
-    GitHub runner bazen domain'e bağlanırken IPv6/DNS tarafında takılabiliyor.
-    Mercedes request'leri için IPv4'e zorluyoruz.
+    GitHub/cron cloud network bazı domainlerde IPv6/routing problemine düşebilir.
+    Mercedes watcher için requests'i IPv4'e zorluyoruz.
     """
-    original_getaddrinfo = socket.getaddrinfo
-
-    def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-        return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-    socket.getaddrinfo = getaddrinfo_ipv4
+    urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
 
 
 def fetch_mercedes_html() -> str:
@@ -35,30 +33,37 @@ def fetch_mercedes_html() -> str:
 
     last_error = None
 
-    for attempt in range(1, 6):
+    # Mercedes hayati olduğu için tek denemede pes etmiyoruz.
+    # 8 attempt, her attempt farklı TCP connection.
+    for attempt in range(1, 9):
         try:
-            print(f"Mercedes fetch attempt {attempt}/5")
+            print(f"Mercedes fetch attempt {attempt}/8")
 
             response = requests.get(
                 MERCEDES_URL,
                 headers=HEADERS,
-                timeout=(20, 90),  # connect timeout, read timeout
-                allow_redirects=True,
+                timeout=(45, 90),  # connect timeout, read timeout
             )
 
             response.raise_for_status()
 
-            if "/job/" not in response.text:
-                print("Mercedes page fetched, but no job links found in HTML.")
+            html = response.text
 
-            return response.text
+            if "/job/" not in html:
+                raise RuntimeError("Mercedes page loaded but no job links were found in HTML.")
+
+            return html
 
         except Exception as error:
             last_error = error
             print(f"Mercedes fetch attempt {attempt} failed: {type(error).__name__}: {error}")
-            time.sleep(10 * attempt)
 
-    raise last_error
+            if attempt < 8:
+                sleep_seconds = min(10 * attempt, 60) + random.randint(0, 5)
+                print(f"Waiting {sleep_seconds} seconds before retry...")
+                time.sleep(sleep_seconds)
+
+    raise RuntimeError(f"Mercedes fetch failed after 8 attempts. Last error: {last_error}")
 
 
 def get_mercedes_jobs() -> list[dict]:
