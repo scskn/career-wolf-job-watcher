@@ -1,7 +1,29 @@
 import re
+from urllib.parse import urlencode
+
 from playwright.sync_api import sync_playwright
 
-SIEMENS_URL = "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/?42386=%5B811999%5D&42386_format=17546&listFilterMode=1&folderSort=postedDate&folderSortDirection=ASC&folderRecordsPerPage=6&"
+SIEMENS_BASE_URL = "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/"
+
+SIEMENS_PARAMS = {
+    "42386": "[811999]",
+    "42386_format": "17546",
+    "listFilterMode": "1",
+    "folderSort": "postedDate",
+    "folderSortDirection": "ASC",
+    "folderRecordsPerPage": "6",
+}
+
+RECORDS_PER_PAGE = 6
+
+
+def build_siemens_search_url(offset: int = 0) -> str:
+    params = dict(SIEMENS_PARAMS)
+
+    if offset > 0:
+        params["folderOffset"] = str(offset)
+
+    return f"{SIEMENS_BASE_URL}?{urlencode(params)}"
 
 
 def build_siemens_job_link(job_id: str) -> str:
@@ -42,6 +64,7 @@ def extract_jobs_from_current_page(page) -> list[dict]:
                 "open jobs",
                 "filters applied",
                 "sorted by most recent",
+                "search",
             ]
 
             if candidate.lower() in banned:
@@ -67,62 +90,6 @@ def extract_jobs_from_current_page(page) -> list[dict]:
     return jobs
 
 
-def find_enabled_next_link(page):
-    next_links = page.locator("a").filter(has_text=re.compile(r"^\s*Next\s*.*$", re.IGNORECASE))
-    count = next_links.count()
-
-    for index in range(count):
-        link = next_links.nth(index)
-
-        try:
-            if not link.is_visible(timeout=2000):
-                continue
-
-            if not link.is_enabled(timeout=2000):
-                continue
-
-            return link
-
-        except Exception:
-            continue
-
-    return None
-
-
-def click_next_page(page) -> bool:
-    next_link = find_enabled_next_link(page)
-
-    if next_link is None:
-        print("Siemens next link is not available or disabled. Stopping pagination.")
-        return False
-
-    before_text = page.locator("body").inner_text(timeout=15000)
-
-    try:
-        next_link.click(timeout=10000)
-
-        try:
-            page.wait_for_function(
-                "(oldText) => document.body.innerText !== oldText",
-                arg=before_text,
-                timeout=15000,
-            )
-        except Exception:
-            page.wait_for_timeout(5000)
-
-        after_text = page.locator("body").inner_text(timeout=15000)
-
-        if after_text == before_text:
-            print("Siemens page did not change after clicking Next. Stopping pagination.")
-            return False
-
-        return True
-
-    except Exception as error:
-        print(f"Siemens next click failed: {type(error).__name__}: {error}")
-        return False
-
-
 def get_siemens_jobs() -> list[dict]:
     all_jobs = []
     seen_ids = set()
@@ -133,23 +100,24 @@ def get_siemens_jobs() -> list[dict]:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(SIEMENS_URL, wait_until="domcontentloaded", timeout=60000)
 
-        page.wait_for_timeout(5000)
+        for page_number in range(1, max_pages + 1):
+            offset = (page_number - 1) * RECORDS_PER_PAGE
+            url = build_siemens_search_url(offset)
 
-        page_number = 1
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(5000)
 
-        while page_number <= max_pages:
             jobs = extract_jobs_from_current_page(page)
 
             if page_number == 1 and not jobs:
                 raise RuntimeError("Siemens first page loaded but no jobs were found.")
 
-            page_signature = "|".join(job["id"] for job in jobs)
-
-            if not page_signature:
-                print("Siemens page has no job signature. Stopping pagination.")
+            if not jobs:
+                print("Siemens page has no jobs. Stopping pagination.")
                 break
+
+            page_signature = "|".join(job["id"] for job in jobs)
 
             if page_signature in seen_page_signatures:
                 print("Siemens page signature repeated. Stopping pagination.")
@@ -164,11 +132,9 @@ def get_siemens_jobs() -> list[dict]:
                     seen_ids.add(job["id"])
                     all_jobs.append(job)
 
-            if not click_next_page(page):
+            if len(jobs) < RECORDS_PER_PAGE:
+                print("Siemens last page reached. Stopping pagination.")
                 break
-
-            page.wait_for_timeout(2000)
-            page_number += 1
 
         browser.close()
 
