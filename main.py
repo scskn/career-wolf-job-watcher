@@ -24,7 +24,7 @@ WATCHERS = [
     },
     {
         "company": "Mercedes-Benz Türk",
-        "init_key": "SYSTEM::MERCEDES_INITIALIZED_V1",
+        "init_key": "SYSTEM::SIEMENS_INITIALIZED_PERMANENT_V1",
         "getter": get_mercedes_jobs,
     },
 ]
