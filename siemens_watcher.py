@@ -8,6 +8,8 @@ SIEMENS_BASE_URL = "https://jobs.siemens.com/en_US/externaljobs/SearchJobs/"
 SIEMENS_PARAMS = {
     "42386": "[811999]",
     "42386_format": "17546",
+    "42393": "[811925]",
+    "42393_format": "17552",
     "listFilterMode": "1",
     "folderSort": "postedDate",
     "folderSortDirection": "ASC",
