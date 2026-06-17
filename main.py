@@ -35,6 +35,7 @@ def format_job_message(job: dict) -> str:
 
 Company: {job["company"]}
 Title: {job["title"]}
+Job ID: {job["id"]}
 Location: {job["location"]}
 
 Link:
