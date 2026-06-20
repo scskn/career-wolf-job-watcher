@@ -33,16 +33,19 @@ def fetch_mercedes_html() -> str:
 
     last_error = None
 
-    # Mercedes önemli ama tek run'ı kilitlemeyecek.
-    # 4 deneme, kısa timeout, kontrollü retry.
-    for attempt in range(1, 5):
+    max_attempts = 4
+    retry_delays = [10, 30, 60]  # attempt 1-2, 2-3, 3-4 arası bekleme
+    timeout = (20, 45)  # connect timeout, read timeout
+
+    for attempt in range(1, max_attempts + 1):
         try:
-            print(f"Mercedes fetch attempt {attempt}/4")
+            print(f"Mercedes fetch attempt {attempt}/{max_attempts} | timeout={timeout}")
 
             response = requests.get(
                 MERCEDES_URL,
                 headers=HEADERS,
-                timeout=(12, 30),  # connect timeout, read timeout
+                timeout=timeout,
+                allow_redirects=True,
             )
 
             response.raise_for_status()
@@ -58,12 +61,15 @@ def fetch_mercedes_html() -> str:
             last_error = error
             print(f"Mercedes fetch attempt {attempt} failed: {type(error).__name__}: {error}")
 
-            if attempt < 4:
-                sleep_seconds = 5 * attempt
+            if attempt < max_attempts:
+                base_sleep = retry_delays[attempt - 1]
+                jitter = random.randint(0, 5)
+                sleep_seconds = base_sleep + jitter
+
                 print(f"Waiting {sleep_seconds} seconds before retry...")
                 time.sleep(sleep_seconds)
 
-    raise RuntimeError(f"Mercedes fetch failed after 4 attempts. Last error: {last_error}")
+    raise RuntimeError(f"Mercedes fetch failed after {max_attempts} attempts. Last error: {last_error}")
 
 
 def get_mercedes_jobs() -> list[dict]:
