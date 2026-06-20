@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .vscode/
 token.txt
+github-pat.txt
