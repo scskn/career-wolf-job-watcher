@@ -149,6 +149,7 @@
   "EPAM::sap-abap-engineering-manager-bltj4vrkf0a4l571pct_en::SAP ABAP Engineering Manager",
   "EPAM::sap-abap-engineering-manager-bltmjg76o2x3d98ym8g_en::SAP ABAP Engineering Manager",
   "EPAM::sap-basis-architect-bltn1lm25zbh1qu0nql_en::SAP Basis Architect",
+  "EPAM::sap-basis-architect-bltpy3zer28clh9pg9s_en::SAP Basis Architect",
   "EPAM::sap-basis-system-solution-architect-blt3af43912d1fd7059_en::SAP Basis / System Solution Architect",
   "EPAM::sap-btp-architect-bltr8tmwdxvswht9tt1_en::SAP BTP Architect",
   "EPAM::sap-cloud-platform-developer-blte0eae837a693bb6d_en::SAP Cloud Platform Developer",
@@ -159,6 +160,7 @@
   "EPAM::sap-mm-sd-consulting-team-lead-blt7a616af142067fb0_en::SAP MM/SD Consulting Team Lead",
   "EPAM::sap-o2c-p2p-business-solution-architect-blt3207b31bf65e5d06_en::SAP O2C / P2P Business Solution Architect",
   "EPAM::sap-r2r-business-solution-architect-bltee0978529921a560_en::SAP R2R Business Solution Architect",
+  "EPAM::sap-s-4hana-public-cloud-solution-architect-bltbdpgla09gamiixh5_en::SAP S/4HANA Public Cloud Solution Architect",
   "EPAM::sap-s-4hana-public-cloud-solution-architect-bltcdlrki8ita261jnq_en::SAP S/4HANA Public Cloud Solution Architect",
   "EPAM::sap-technical-engineering-manager-sap-basis-blt5734f0a00c375365_en::SAP Technical Engineering Manager (SAP Basis)",
   "EPAM::senior-abap-developer-bltgjf244xmvyu7ygyz_en::Senior ABAP Developer",
@@ -404,5 +406,6 @@
   "Siemens::520160::Project Manager",
   "Siemens::520337::OEM Account Manager",
   "Siemens::520655::Operational Buying Professional",
-  "Siemens::520839::Parts Production Manager (MV & LV Switchgear)"
+  "Siemens::520839::Parts Production Manager (MV & LV Switchgear)",
+  "Siemens::521128::Part-Time Working Student Digital Service Operations (Integration and Cloud Application Engineer)"
 ]
